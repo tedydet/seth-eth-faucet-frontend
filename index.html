@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sepolia sETH → Arbitrum ETH Faucet</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #080b12;
+      --card: #111827;
+      --card2: #0f172a;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --line: rgba(255,255,255,0.08);
+      --accent: #60a5fa;
+      --accent2: #38bdf8;
+      --green: #22c55e;
+      --yellow: #eab308;
+      --red: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 20% 10%, rgba(56,189,248,0.16), transparent 32%),
+        radial-gradient(circle at 80% 20%, rgba(96,165,250,0.14), transparent 28%),
+        linear-gradient(135deg, #020617, #0f172a 60%, #020617);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+    }
+
+    .shell {
+      width: 100%;
+      max-width: 960px;
+    }
+
+    .hero {
+      margin-bottom: 18px;
+      text-align: center;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(28px, 5vw, 48px);
+      letter-spacing: -0.04em;
+    }
+
+    .hero p {
+      margin: 12px auto 0;
+      max-width: 680px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 820px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(17,24,39,0.92), rgba(15,23,42,0.92));
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 22px;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.32);
+      backdrop-filter: blur(14px);
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      padding: 14px 0;
+    }
+
+    .row:first-child {
+      padding-top: 0;
+    }
+
+    .row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .value {
+      font-weight: 700;
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px;
+      border-radius: 18px;
+      margin-bottom: 16px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      background: var(--muted);
+      box-shadow: 0 0 20px currentColor;
+      flex: 0 0 auto;
+    }
+
+    .status.green .dot {
+      background: var(--green);
+      color: var(--green);
+    }
+
+    .status.yellow .dot {
+      background: var(--yellow);
+      color: var(--yellow);
+    }
+
+    .status.red .dot {
+      background: var(--red);
+      color: var(--red);
+    }
+
+    .status strong {
+      display: block;
+    }
+
+    .status span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    input {
+      width: 100%;
+      background: rgba(2,6,23,0.72);
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 13px 14px;
+      outline: none;
+      font-size: 15px;
+    }
+
+    input:focus {
+      border-color: rgba(96,165,250,0.75);
+      box-shadow: 0 0 0 3px rgba(96,165,250,0.16);
+    }
+
+    .field {
+      margin-bottom: 13px;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 14px;
+      padding: 13px 16px;
+      font-weight: 800;
+      cursor: pointer;
+      color: #020617;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      transition: transform 0.12s ease, opacity 0.12s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+      transform: none;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .full {
+      width: 100%;
+    }
+
+    .log {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 13px;
+      min-height: 20px;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+      margin-top: 14px;
+    }
+
+    code {
+      color: #bae6fd;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="shell">
+    <section class="hero">
+      <h1>Sepolia sETH → Arbitrum ETH</h1>
+      <p>
+        Deposit Sepolia ETH, receive claimable Arbitrum ETH credits, and claim small native ETH payouts on Arbitrum.
+        This is a demo faucet, not a bridge.
+      </p>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <div id="coverageBox" class="status">
+          <div class="dot"></div>
+          <div>
+            <strong id="coverageTitle">Checking coverage…</strong>
+            <span id="coverageText">Reading contract and Arbitrum ETH treasury balance.</span>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="label">Your connected wallet</div>
+          <div class="value" id="walletAddress">Not connected</div>
+        </div>
+
+        <div class="row">
+          <div class="label">Your claimable Arbitrum ETH</div>
+          <div class="value" id="userBalance">–</div>
+        </div>
+
+        <div class="row">
+          <div class="label">Current sETH → ETH rate</div>
+          <div class="value" id="price">–</div>
+        </div>
+
+
+        <div class="row">
+          <div class="label">Total unpaid ETH obligations</div>
+          <div class="value" id="totalOutstanding">–</div>
+        </div>
+
+        <div class="row">
+          <div class="label">Arbitrum ETH treasury</div>
+          <div class="value" id="treasuryBalance">–</div>
+        </div>
+
+        <div class="row">
+          <div class="label">Read RPCs</div>
+          <div class="value" id="activeRpcs">–</div>
+        </div>
+
+        <div class="buttons">
+          <button id="connectBtn">Connect Wallet</button>
+          <button id="refreshBtn">Refresh</button>
+        </div>
+
+        <div class="small">
+          Coverage means: <code>Arbitrum ETH treasury ≥ totalOutstandingEth</code>.
+          Green = all potential ETH claims are covered. Yellow = partially covered. Red = not covered.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="field">
+          <label for="depositAmount">Deposit Sepolia ETH</label>
+          <input id="depositAmount" placeholder="0.01" inputmode="decimal" />
+        </div>
+        <button class="full" id="depositBtn">Deposit</button>
+
+        <hr style="border:0;border-top:1px solid var(--line);margin:22px 0;">
+
+        <div class="field">
+          <label for="claimAmount">Claim amount in Arbitrum ETH</label>
+          <input id="claimAmount" placeholder="0.0001" inputmode="decimal" />
+        </div>
+
+        <div class="field">
+          <label for="payoutAddress">Arbitrum payout address</label>
+          <input id="payoutAddress" placeholder="0x..." />
+        </div>
+
+        <button class="full" id="claimBtn">Request ETH Claim</button>
+
+        <div class="log" id="log"></div>
+
+        <div class="small">
+          Minimum claim amount: <strong id="minClaimInfo">–</strong>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // ------------------------------------------------------------------
+    // Configure these values
+    // ------------------------------------------------------------------
+
+    const SEPOLIA_CONTRACT = "0xed171Ec6417332a08cA3b2dA2A0091C771aCe4ae";
+    const ARBITRUM_FAUCET_ADDRESS = "0xC6179001d493cFb70E8B2E472ff3A68Bc60921aA";
+
+    const SEPOLIA_RPCS = [
+      "https://rpc.sepolia.org",
+      "https://ethereum-sepolia-rpc.publicnode.com",
+      "https://1rpc.io/sepolia"
+    ];
+
+    const ARBITRUM_RPCS = [
+      "https://arb1.arbitrum.io/rpc",
+      "https://public-arb-mainnet.fastnode.io",
+      "https://arb-one.api.pocket.network",
+      "https://arbitrum.meowrpc.com"
+    ];
+
+    const SEPOLIA_CHAIN_ID = 11155111;
+    const ARBITRUM_CHAIN_ID = 42161;
+
+    const CONTRACT_ABI = [
+      "function rateEthE18() view returns (uint256)",
+      "function minClaimEth() view returns (uint256)",
+      "function claimableEth(address) view returns (uint256)",
+      "function totalOutstandingEth() view returns (uint256)",
+      "function deposit() payable",
+      "function requestClaim(uint256 amountEth,address payoutAddress)"
+    ];
+
+    let walletProvider = null;
+    let signer = null;
+    let userAddress = null;
+
+    let readSepolia = null;
+    let readArbitrum = null;
+    let readContract = null;
+    let activeSepoliaRpc = null;
+    let activeArbitrumRpc = null;
+
+    async function firstWorkingProvider(name, urls) {
+      const errors = [];
+      for (const url of urls) {
+        try {
+          const provider = new ethers.JsonRpcProvider(url);
+          await provider.getBlockNumber();
+          console.log(`${name} RPC connected: ${url}`);
+          return { provider, url };
+        } catch (err) {
+          console.warn(`${name} RPC failed: ${url}`, err);
+          errors.push(`${url}: ${err.message || err}`);
+        }
+      }
+      throw new Error(`No working ${name} RPC. ${errors.join(" | ")}`);
+    }
+
+    async function initReadProviders() {
+      if (readSepolia && readArbitrum && readContract) return;
+
+      const sep = await firstWorkingProvider("Sepolia", SEPOLIA_RPCS);
+      const arb = await firstWorkingProvider("Arbitrum", ARBITRUM_RPCS);
+
+      readSepolia = sep.provider;
+      readArbitrum = arb.provider;
+      activeSepoliaRpc = sep.url;
+      activeArbitrumRpc = arb.url;
+      readContract = new ethers.Contract(SEPOLIA_CONTRACT, CONTRACT_ABI, readSepolia);
+    }
+
+    const el = (id) => document.getElementById(id);
+
+    function setLog(msg) {
+      el("log").textContent = msg || "";
+    }
+
+    function fmt18(value, digits = 4) {
+      return Number(ethers.formatUnits(value, 18)).toLocaleString(undefined, {
+        maximumFractionDigits: digits
+      });
+    }
+
+
+    function shortAddr(addr) {
+      if (!addr || addr.length < 12) return addr || "";
+      return addr.slice(0, 6) + "…" + addr.slice(-4);
+    }
+
+    async function ensureSepolia() {
+      if (!window.ethereum) throw new Error("No injected wallet found.");
+
+      const hexChainId = "0x" + SEPOLIA_CHAIN_ID.toString(16);
+      const current = await window.ethereum.request({ method: "eth_chainId" });
+
+      if (current !== hexChainId) {
+        await window.ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: hexChainId }]
+        });
+      }
+    }
+
+    async function connectWallet() {
+      if (!window.ethereum) {
+        setLog("No injected wallet found. Please install MetaMask or Rabby.");
+        return;
+      }
+
+      await ensureSepolia();
+
+      walletProvider = new ethers.BrowserProvider(window.ethereum);
+      await walletProvider.send("eth_requestAccounts", []);
+      signer = await walletProvider.getSigner();
+      userAddress = await signer.getAddress();
+
+      el("walletAddress").textContent = shortAddr(userAddress);
+      el("payoutAddress").value = userAddress;
+
+      await refresh();
+    }
+
+    function setCoverage(color, title, text) {
+      const box = el("coverageBox");
+      box.classList.remove("green", "yellow", "red");
+      box.classList.add(color);
+      el("coverageTitle").textContent = title;
+      el("coverageText").textContent = text;
+    }
+
+    async function refresh() {
+      try {
+        await initReadProviders();
+
+        const [
+          rateEthE18,
+          minClaimEth,
+          totalOutstandingEth,
+          treasuryEth
+        ] = await Promise.all([
+          readContract.rateEthE18(),
+          readContract.minClaimEth(),
+          readContract.totalOutstandingEth(),
+          readArbitrum.getBalance(ARBITRUM_FAUCET_ADDRESS)
+        ]);
+
+        el("price").textContent = fmt18(rateEthE18, 8) + " ETH per sETH";
+        el("minClaimInfo").textContent = fmt18(minClaimEth, 8) + " ETH";
+        el("totalOutstanding").textContent = fmt18(totalOutstandingEth, 8) + " ETH";
+        el("treasuryBalance").textContent = fmt18(treasuryEth, 8) + " ETH";
+
+        el("activeRpcs").textContent = `Sepolia: ${new URL(activeSepoliaRpc).hostname} · Arbitrum: ${new URL(activeArbitrumRpc).hostname}`;
+
+        const neededEth = totalOutstandingEth;
+
+        if (neededEth === 0n) {
+          setCoverage(
+            "green",
+            "No open claims",
+            "There are currently no unpaid ETH obligations."
+          );
+        } else if (treasuryEth >= neededEth) {
+          setCoverage(
+            "green",
+            "Fully covered",
+            "All potential ETH claims are currently covered by the Arbitrum ETH treasury."
+          );
+        } else if (treasuryEth > 0n) {
+          setCoverage(
+            "yellow",
+            "Partially covered",
+            "The Arbitrum ETH treasury can pay only part of all potential ETH claims."
+          );
+        } else {
+          setCoverage(
+            "red",
+            "Not covered",
+            "The Arbitrum ETH treasury is empty or unavailable."
+          );
+        }
+
+        if (userAddress) {
+          const bal = await readContract.claimableEth(userAddress);
+          el("userBalance").textContent = fmt18(bal, 8) + " ETH";
+        } else {
+          el("userBalance").textContent = "Connect wallet";
+        }
+
+        setLog("Updated.");
+      } catch (err) {
+        console.error(err);
+        setCoverage("red", "Read failed", err.message || String(err));
+        setLog("Refresh failed: " + (err.message || String(err)));
+      }
+    }
+
+    async function deposit() {
+      try {
+        if (!signer) await connectWallet();
+        await ensureSepolia();
+        await initReadProviders();
+
+        const amountText = el("depositAmount").value.trim();
+        if (!amountText) throw new Error("Enter a Sepolia ETH amount.");
+
+        const contract = new ethers.Contract(SEPOLIA_CONTRACT, CONTRACT_ABI, signer);
+        const value = ethers.parseEther(amountText);
+
+        setLog("Sending deposit transaction…");
+        const tx = await contract.deposit({ value });
+        setLog("Deposit sent: " + tx.hash);
+
+        await tx.wait();
+        setLog("Deposit confirmed.");
+
+        await refresh();
+      } catch (err) {
+        console.error(err);
+        setLog("Deposit failed: " + (err.shortMessage || err.message || String(err)));
+      }
+    }
+
+    async function claim() {
+      try {
+        if (!signer) await connectWallet();
+        await ensureSepolia();
+        await initReadProviders();
+
+        const amountText = el("claimAmount").value.trim();
+        const payoutAddress = el("payoutAddress").value.trim();
+
+        if (!amountText) throw new Error("Enter an Arbitrum ETH claim amount.");
+        if (!ethers.isAddress(payoutAddress)) throw new Error("Invalid payout address.");
+
+        const contract = new ethers.Contract(SEPOLIA_CONTRACT, CONTRACT_ABI, signer);
+        const amount = ethers.parseUnits(amountText, 18);
+
+        setLog("Sending claim request…");
+        const tx = await contract.requestClaim(amount, payoutAddress);
+        setLog("Claim request sent: " + tx.hash);
+
+        await tx.wait();
+        setLog("Claim request confirmed. The watcher will process the Arbitrum ETH payout.");
+
+        await refresh();
+      } catch (err) {
+        console.error(err);
+        setLog("Claim failed: " + (err.shortMessage || err.message || String(err)));
+      }
+    }
+
+    el("connectBtn").addEventListener("click", connectWallet);
+    el("refreshBtn").addEventListener("click", refresh);
+    el("depositBtn").addEventListener("click", deposit);
+    el("claimBtn").addEventListener("click", claim);
+
+    refresh();
+
+    if (window.ethereum) {
+      window.ethereum.on("accountsChanged", () => window.location.reload());
+      window.ethereum.on("chainChanged", () => window.location.reload());
+    }
+  </script>
+</body>
+</html>
