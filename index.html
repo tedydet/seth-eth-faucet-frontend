@@ -43,7 +43,7 @@
 
     .shell {
       width: 100%;
-      max-width: 960px;
+      max-width: 620px;
     }
 
     .hero {
@@ -64,17 +64,7 @@
       line-height: 1.55;
     }
 
-    .grid {
-      display: grid;
-      grid-template-columns: 1.1fr 0.9fr;
-      gap: 18px;
-    }
 
-    @media (max-width: 820px) {
-      .grid {
-        grid-template-columns: 1fr;
-      }
-    }
 
     .card {
       background: linear-gradient(180deg, rgba(17,24,39,0.92), rgba(15,23,42,0.92));
@@ -115,6 +105,14 @@
       white-space: nowrap;
       font-size: clamp(18px, 2.4vw, 24px);
       line-height: 1.15;
+    }
+
+    .claimable-good {
+      color: var(--green);
+    }
+
+    .claimable-warning {
+      color: var(--yellow);
     }
 
     .input-with-button {
@@ -283,7 +281,7 @@
       </p>
     </section>
 
-    <section class="grid">
+    <section>
       <div class="card">
         <div id="coverageBox" class="status">
           <div class="dot"></div>
@@ -291,6 +289,11 @@
             <strong id="coverageTitle">Checking coverage…</strong>
             <span id="coverageText">Reading contract and Arbitrum ETH treasury balance.</span>
           </div>
+        </div>
+
+        <div class="buttons" style="margin-bottom:14px;">
+          <button id="connectBtn">Connect Wallet</button>
+          <button id="refreshBtn">Refresh</button>
         </div>
 
         <div class="row">
@@ -301,38 +304,12 @@
           <div class="label">Your Sepolia ETH balance</div>
           <div class="value" id="sepoliaEthBalance">–</div>
         </div>
-
-
         <div class="row">
           <div class="label">Current sETH → ETH rate</div>
           <div class="value" id="price">–</div>
         </div>
 
-
-        <div class="row">
-          <div class="label">Total unpaid ETH obligations</div>
-          <div class="value" id="totalOutstanding">–</div>
-        </div>
-
-        <div class="row">
-          <div class="label">Arbitrum ETH treasury</div>
-          <div class="value" id="treasuryBalance">–</div>
-        </div>
-
-
-        <div class="buttons">
-          <button id="connectBtn">Connect Wallet</button>
-          <button id="refreshBtn">Refresh</button>
-        </div>
-
-        <div class="small">
-          Coverage means: <code>Arbitrum ETH treasury ≥ totalOutstandingEth</code>.
-          Green = all potential ETH claims are covered. Yellow = partially covered. Red = not covered.
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="row claimable-row" style="padding-top:0;margin-bottom:14px;">
+        <div class="row claimable-row" style="margin-bottom:14px;">
           <div class="label">Claimable Arbitrum ETH</div>
           <div class="value" id="userBalance">–</div>
         </div>
@@ -367,6 +344,7 @@
         <div class="small">
           Minimum claim amount: <strong id="minClaimInfo">–</strong>
         </div>
+
       </div>
     </section>
   </main>
@@ -515,9 +493,26 @@
       userAddress = await signer.getAddress();
 
       el("walletAddress").textContent = shortAddr(userAddress);
+      el("connectBtn").textContent = "Disconnect";
       el("payoutAddress").value = userAddress;
 
       await refresh();
+    }
+
+    function disconnectWallet() {
+      walletProvider = null;
+      signer = null;
+      userAddress = null;
+
+      el("walletAddress").textContent = "Not connected";
+      el("connectBtn").textContent = "Connect Wallet";
+      el("payoutAddress").value = "";
+      el("userBalance").textContent = "Please connect!";
+      el("userBalance").classList.remove("claimable-good");
+      el("userBalance").classList.add("claimable-warning");
+      el("sepoliaEthBalance").textContent = "Connect wallet";
+      currentClaimableEth = 0n;
+      setLog("Wallet disconnected locally.");
     }
 
     function setCoverage(color, title, text) {
@@ -548,8 +543,6 @@
         currentRateEthE18 = rateEthE18;
         updateDepositPreview();
         el("minClaimInfo").textContent = fmt18(minClaimEth, 8) + " ETH";
-        el("totalOutstanding").textContent = fmt18(totalOutstandingEth, 8) + " ETH";
-        el("treasuryBalance").textContent = fmt18(treasuryEth, 8) + " ETH";
 
 
         const neededEth = totalOutstandingEth;
@@ -586,10 +579,14 @@
             readSepolia.getBalance(userAddress)
           ]);
           el("userBalance").textContent = fmt18(claimableBal, 8) + " ETH";
+          el("userBalance").classList.remove("claimable-warning");
+          el("userBalance").classList.add("claimable-good");
           currentClaimableEth = claimableBal;
           el("sepoliaEthBalance").textContent = fmt18(sepoliaEthBal, 6) + " Sepolia ETH";
         } else {
-          el("userBalance").textContent = "Connect wallet";
+          el("userBalance").textContent = "Please connect!";
+          el("userBalance").classList.remove("claimable-good");
+          el("userBalance").classList.add("claimable-warning");
           currentClaimableEth = 0n;
           el("sepoliaEthBalance").textContent = "Connect wallet";
         }
@@ -657,7 +654,13 @@
       }
     }
 
-    el("connectBtn").addEventListener("click", connectWallet);
+    el("connectBtn").addEventListener("click", () => {
+      if (userAddress) {
+        disconnectWallet();
+      } else {
+        connectWallet();
+      }
+    });
     el("refreshBtn").addEventListener("click", refresh);
     el("depositBtn").addEventListener("click", deposit);
     el("claimBtn").addEventListener("click", claim);
