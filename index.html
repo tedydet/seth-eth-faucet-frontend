@@ -103,6 +103,39 @@
       padding-bottom: 0;
     }
 
+    .claimable-row {
+      align-items: flex-start;
+    }
+
+    .claimable-row .label {
+      max-width: 62%;
+    }
+
+    .claimable-row .value {
+      white-space: nowrap;
+      font-size: clamp(18px, 2.4vw, 24px);
+      line-height: 1.15;
+    }
+
+    .input-with-button {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .input-with-button input {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .mini-button {
+      flex: 0 0 auto;
+      padding: 13px 14px;
+      border-radius: 14px;
+      font-size: 13px;
+      min-width: 64px;
+    }
+
     .label {
       color: var(--muted);
       font-size: 14px;
@@ -299,8 +332,8 @@
       </div>
 
       <div class="card">
-        <div class="row" style="padding-top:0;margin-bottom:14px;">
-          <div class="label">Your currently claimable Arbitrum ETH</div>
+        <div class="row claimable-row" style="padding-top:0;margin-bottom:14px;">
+          <div class="label">Claimable Arbitrum ETH</div>
           <div class="value" id="userBalance">–</div>
         </div>
         <div class="field">
@@ -316,7 +349,10 @@
 
         <div class="field">
           <label for="claimAmount">Claim amount in Arbitrum ETH</label>
-          <input id="claimAmount" placeholder="0.0001" inputmode="decimal" />
+          <div class="input-with-button">
+            <input id="claimAmount" placeholder="0.0001" inputmode="decimal" />
+            <button type="button" class="mini-button" id="maxClaimBtn">Max</button>
+          </div>
         </div>
 
         <div class="field">
@@ -378,6 +414,7 @@
     let activeSepoliaRpc = null;
     let activeArbitrumRpc = null;
     let currentRateEthE18 = null;
+    let currentClaimableEth = 0n;
 
     async function firstWorkingProvider(name, urls) {
       const errors = [];
@@ -434,6 +471,14 @@
       } catch (_err) {
         el("depositPreview").textContent = "Estimated Arbitrum ETH credit: –";
       }
+    }
+
+    function setMaxClaimAmount() {
+      if (!currentClaimableEth || currentClaimableEth <= 0n) {
+        setLog("No claimable Arbitrum ETH available yet.");
+        return;
+      }
+      el("claimAmount").value = ethers.formatUnits(currentClaimableEth, 18);
     }
 
 
@@ -541,9 +586,11 @@
             readSepolia.getBalance(userAddress)
           ]);
           el("userBalance").textContent = fmt18(claimableBal, 8) + " ETH";
+          currentClaimableEth = claimableBal;
           el("sepoliaEthBalance").textContent = fmt18(sepoliaEthBal, 6) + " Sepolia ETH";
         } else {
           el("userBalance").textContent = "Connect wallet";
+          currentClaimableEth = 0n;
           el("sepoliaEthBalance").textContent = "Connect wallet";
         }
 
@@ -614,6 +661,7 @@
     el("refreshBtn").addEventListener("click", refresh);
     el("depositBtn").addEventListener("click", deposit);
     el("claimBtn").addEventListener("click", claim);
+    el("maxClaimBtn").addEventListener("click", setMaxClaimAmount);
     el("depositAmount").addEventListener("input", updateDepositPreview);
 
     refresh();
