@@ -264,6 +264,10 @@
           <div class="label">Your connected wallet</div>
           <div class="value" id="walletAddress">Not connected</div>
         </div>
+        <div class="row">
+          <div class="label">Your Sepolia ETH balance</div>
+          <div class="value" id="sepoliaEthBalance">–</div>
+        </div>
 
         <div class="row">
           <div class="label">Your claimable Arbitrum ETH</div>
@@ -286,10 +290,6 @@
           <div class="value" id="treasuryBalance">–</div>
         </div>
 
-        <div class="row">
-          <div class="label">Read RPCs</div>
-          <div class="value" id="activeRpcs">–</div>
-        </div>
 
         <div class="buttons">
           <button id="connectBtn">Connect Wallet</button>
@@ -484,7 +484,6 @@
         el("totalOutstanding").textContent = fmt18(totalOutstandingEth, 8) + " ETH";
         el("treasuryBalance").textContent = fmt18(treasuryEth, 8) + " ETH";
 
-        el("activeRpcs").textContent = `Sepolia: ${new URL(activeSepoliaRpc).hostname} · Arbitrum: ${new URL(activeArbitrumRpc).hostname}`;
 
         const neededEth = totalOutstandingEth;
 
@@ -515,10 +514,15 @@
         }
 
         if (userAddress) {
-          const bal = await readContract.claimableEth(userAddress);
-          el("userBalance").textContent = fmt18(bal, 8) + " ETH";
+          const [claimableBal, sepoliaEthBal] = await Promise.all([
+            readContract.claimableEth(userAddress),
+            readSepolia.getBalance(userAddress)
+          ]);
+          el("userBalance").textContent = fmt18(claimableBal, 8) + " ETH";
+          el("sepoliaEthBalance").textContent = fmt18(sepoliaEthBal, 6) + " Sepolia ETH";
         } else {
           el("userBalance").textContent = "Connect wallet";
+          el("sepoliaEthBalance").textContent = "Connect wallet";
         }
 
         setLog("Updated.");
