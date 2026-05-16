@@ -269,10 +269,6 @@
           <div class="value" id="sepoliaEthBalance">–</div>
         </div>
 
-        <div class="row">
-          <div class="label">Your claimable Arbitrum ETH</div>
-          <div class="value" id="userBalance">–</div>
-        </div>
 
         <div class="row">
           <div class="label">Current sETH → ETH rate</div>
@@ -303,9 +299,16 @@
       </div>
 
       <div class="card">
+        <div class="row" style="padding-top:0;margin-bottom:14px;">
+          <div class="label">Your currently claimable Arbitrum ETH</div>
+          <div class="value" id="userBalance">–</div>
+        </div>
         <div class="field">
           <label for="depositAmount">Deposit Sepolia ETH</label>
           <input id="depositAmount" placeholder="0.01" inputmode="decimal" />
+        </div>
+        <div class="small" id="depositPreview" style="margin-top:-6px;margin-bottom:12px;">
+          Estimated Arbitrum ETH credit: –
         </div>
         <button class="full" id="depositBtn">Deposit</button>
 
@@ -374,6 +377,7 @@
     let readContract = null;
     let activeSepoliaRpc = null;
     let activeArbitrumRpc = null;
+    let currentRateEthE18 = null;
 
     async function firstWorkingProvider(name, urls) {
       const errors = [];
@@ -414,6 +418,22 @@
       return Number(ethers.formatUnits(value, 18)).toLocaleString(undefined, {
         maximumFractionDigits: digits
       });
+    }
+
+    function updateDepositPreview() {
+      const amountText = el("depositAmount").value.trim();
+      if (!amountText || !currentRateEthE18) {
+        el("depositPreview").textContent = "Estimated Arbitrum ETH credit: –";
+        return;
+      }
+
+      try {
+        const depositWei = ethers.parseEther(amountText);
+        const estimatedWei = (depositWei * currentRateEthE18) / 1000000000000000000n;
+        el("depositPreview").textContent = "Estimated Arbitrum ETH credit: " + fmt18(estimatedWei, 8) + " ETH";
+      } catch (_err) {
+        el("depositPreview").textContent = "Estimated Arbitrum ETH credit: –";
+      }
     }
 
 
@@ -480,6 +500,8 @@
         ]);
 
         el("price").textContent = fmt18(rateEthE18, 8) + " ETH per sETH";
+        currentRateEthE18 = rateEthE18;
+        updateDepositPreview();
         el("minClaimInfo").textContent = fmt18(minClaimEth, 8) + " ETH";
         el("totalOutstanding").textContent = fmt18(totalOutstandingEth, 8) + " ETH";
         el("treasuryBalance").textContent = fmt18(treasuryEth, 8) + " ETH";
@@ -592,6 +614,7 @@
     el("refreshBtn").addEventListener("click", refresh);
     el("depositBtn").addEventListener("click", deposit);
     el("claimBtn").addEventListener("click", claim);
+    el("depositAmount").addEventListener("input", updateDepositPreview);
 
     refresh();
 
