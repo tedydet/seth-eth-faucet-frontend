@@ -344,6 +344,9 @@
         <div class="small">
           Minimum claim amount: <strong id="minClaimInfo">–</strong>
         </div>
+        <div class="small">
+          After a claim request is confirmed on Sepolia, Arbitrum ETH payouts usually arrive within 30–120 seconds.
+        </div>
 
       </div>
     </section>
@@ -393,6 +396,8 @@
     let activeArbitrumRpc = null;
     let currentRateEthE18 = null;
     let currentClaimableEth = 0n;
+    let currentMinClaimEth = 0n;
+    let refreshTimer = null;
 
     async function firstWorkingProvider(name, urls) {
       const errors = [];
@@ -459,6 +464,30 @@
       el("claimAmount").value = ethers.formatUnits(currentClaimableEth, 18);
     }
 
+    function validateClaimAmount() {
+      const amountText = el("claimAmount").value.trim();
+      const claimBtn = el("claimBtn");
+
+      if (!amountText || !currentMinClaimEth || currentMinClaimEth <= 0n) {
+        claimBtn.disabled = true;
+        return;
+      }
+
+      try {
+        const amount = ethers.parseUnits(amountText, 18);
+        claimBtn.disabled = amount < currentMinClaimEth;
+      } catch (_err) {
+        claimBtn.disabled = true;
+      }
+    }
+
+    function startAutoRefresh() {
+      if (refreshTimer) return;
+      refreshTimer = setInterval(() => {
+        refresh({ silent: true });
+      }, 20000);
+    }
+
 
     function shortAddr(addr) {
       if (!addr || addr.length < 12) return addr || "";
@@ -523,7 +552,7 @@
       el("coverageText").textContent = text;
     }
 
-    async function refresh() {
+    async function refresh(options = {}) {
       try {
         await initReadProviders();
 
@@ -543,6 +572,8 @@
         currentRateEthE18 = rateEthE18;
         updateDepositPreview();
         el("minClaimInfo").textContent = fmt18(minClaimEth, 8) + " ETH";
+        currentMinClaimEth = minClaimEth;
+        validateClaimAmount();
 
 
         const neededEth = totalOutstandingEth;
@@ -550,26 +581,26 @@
         if (neededEth === 0n) {
           setCoverage(
             "green",
-            "No open claims",
-            "There are currently no unpaid ETH obligations."
+            "Faucet ready",
+            "Ready for small Arbitrum ETH payouts."
           );
         } else if (treasuryEth >= neededEth) {
           setCoverage(
             "green",
-            "Fully covered",
-            "All potential ETH claims are currently covered by the Arbitrum ETH treasury."
+            "Faucet ready",
+            "Ready for small Arbitrum ETH payouts."
           );
         } else if (treasuryEth > 0n) {
           setCoverage(
             "yellow",
-            "Partially covered",
-            "The Arbitrum ETH treasury can pay only part of all potential ETH claims."
+            "Faucet low",
+            "Payout liquidity is limited. Smaller claims may still work."
           );
         } else {
           setCoverage(
             "red",
-            "Not covered",
-            "The Arbitrum ETH treasury is empty or unavailable."
+            "Faucet empty",
+            "Payouts are currently unavailable until the faucet is refilled."
           );
         }
 
@@ -591,11 +622,15 @@
           el("sepoliaEthBalance").textContent = "Connect wallet";
         }
 
-        setLog("Updated.");
+        if (!options.silent) {
+          setLog("Updated.");
+        }
       } catch (err) {
         console.error(err);
         setCoverage("red", "Read failed", err.message || String(err));
-        setLog("Refresh failed: " + (err.message || String(err)));
+        if (!options.silent) {
+          setLog("Refresh failed: " + (err.message || String(err)));
+        }
       }
     }
 
@@ -639,13 +674,16 @@
 
         const contract = new ethers.Contract(SEPOLIA_CONTRACT, CONTRACT_ABI, signer);
         const amount = ethers.parseUnits(amountText, 18);
+        if (amount < currentMinClaimEth) {
+          throw new Error("Claim amount is below the minimum claim amount.");
+        }
 
         setLog("Sending claim request…");
         const tx = await contract.requestClaim(amount, payoutAddress);
         setLog("Claim request sent: " + tx.hash);
 
         await tx.wait();
-        setLog("Claim request confirmed. The watcher will process the Arbitrum ETH payout.");
+        setLog("Claim request confirmed. Arbitrum ETH payouts usually arrive within 30–120 seconds.");
 
         await refresh();
       } catch (err) {
@@ -666,8 +704,11 @@
     el("claimBtn").addEventListener("click", claim);
     el("maxClaimBtn").addEventListener("click", setMaxClaimAmount);
     el("depositAmount").addEventListener("input", updateDepositPreview);
+    el("claimAmount").addEventListener("input", validateClaimAmount);
 
+    validateClaimAmount();
     refresh();
+    startAutoRefresh();
 
     if (window.ethereum) {
       window.ethereum.on("accountsChanged", () => window.location.reload());
