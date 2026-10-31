@@ -507,7 +507,8 @@
 						<button class="full" id="claimBtn">Request payout</button>
 						<div class="small">
 							Minimum claim amount:
-							<strong><strong id="minClaimInfo">–</strong></strong>
+							<strong id="minClaimInfo">–</strong>
+							<div id="minDepositInfo" aria-live="polite">Required Sepolia ETH: checking…</div>
 						</div>
 						<div class="small">
 							After confirmation on Sepolia, payouts usually arrive on Arbitrum within
@@ -603,6 +604,7 @@
 			const CONTRACT_ABI = [
 				"function rateEthE18() view returns (uint256)",
 				"function minClaimEth() view returns (uint256)",
+				"function scaleBps() view returns (uint256)",
 				"function claimableEth(address) view returns (uint256)",
 				"function totalOutstandingEth() view returns (uint256)",
 				"function deposit() payable",
@@ -612,6 +614,7 @@
 			let signer = null;
 			let userAddress = null;
 			let currentRateEthE18 = null;
+			let currentScaleBps = null;
 			let currentClaimableEth = 0n;
 			let currentMinClaimEth = 0n;
 			let refreshTimer = null;
@@ -684,18 +687,35 @@
 			}
 			function updateDepositPreview() {
 				const amountText = el("depositAmount").value.trim();
-				if (!amountText || !currentRateEthE18) {
+				if (!amountText || !currentRateEthE18 || !currentScaleBps) {
 					el("depositPreview").textContent = "Estimated Arbitrum ETH credit: –";
 					return;
 				}
 				try {
 					const depositWei = ethers.parseEther(amountText);
-					const estimatedWei = (depositWei * currentRateEthE18) / 1000000000000000000n;
+					const estimatedWei = (depositWei * currentRateEthE18 * currentScaleBps) / 10000000000000000000000n;
 					el("depositPreview").textContent =
 						"Estimated Arbitrum ETH credit: " + fmt18(estimatedWei, 8) + " ETH";
 				} catch (_err) {
 					el("depositPreview").textContent = "Estimated Arbitrum ETH credit: –";
 				}
+			}
+			function minimumSepoliaAmount(minimum, rate, scale) {
+				if (rate <= 0n || scale <= 0n) return null;
+				const numerator = minimum * 10000000000000000000000n;
+				const denominator = rate * scale;
+				return (numerator + denominator - 1n) / denominator;
+			}
+			function updateMinimumDeposit() {
+				if (!currentRateEthE18 || !currentScaleBps) {
+					el("minDepositInfo").textContent = "Required Sepolia ETH: unavailable";
+					return;
+				}
+				const required = minimumSepoliaAmount(currentMinClaimEth, currentRateEthE18, currentScaleBps);
+				// Round UP to six decimals so the displayed deposit covers the minimum.
+				const displayWei = ((required + 999999999999n) / 1000000000000n) * 1000000000000n;
+				el("minDepositInfo").textContent = "Requires " + ethers.formatEther(displayWei) +
+					" Sepolia ETH (sETH) at the current rate, with no existing credit. Sepolia gas fees are extra.";
 			}
 			function setMaxClaimAmount() {
 				if (!currentClaimableEth || currentClaimableEth <= 0n) {
@@ -822,13 +842,17 @@
 					}
 				})();
 				const settingsTask = (async () => {
-					const [rate, minimum] = await readSepoliaContract(contract =>
-						Promise.all([contract.rateEthE18(), contract.minClaimEth()]));
+					const [rate, minimum, scale] = await readSepoliaContract(async contract => {
+						const blockTag = await contract.runner.getBlockNumber();
+						return Promise.all([contract.rateEthE18({ blockTag }), contract.minClaimEth({ blockTag }), contract.scaleBps({ blockTag })]);
+					});
 					if (!isCurrent()) return;
 					currentRateEthE18 = rate;
+					currentScaleBps = scale;
 					currentMinClaimEth = minimum;
-					el("price").textContent = fmt18(rate, 8) + " ETH per sETH";
+					el("price").textContent = fmt18((rate * scale) / 10000n, 8) + " ETH per sETH";
 					el("minClaimInfo").textContent = fmt18(minimum, 8) + " ETH";
+					updateMinimumDeposit();
 					updateDepositPreview();
 					validateClaimAmount();
 				})();
@@ -851,6 +875,8 @@
 				if (failed) {
 					if (results[1].status === "rejected") {
 						currentRateEthE18 = null;
+						currentScaleBps = null;
+						updateMinimumDeposit();
 						currentMinClaimEth = 0n;
 						el("price").textContent = "Unavailable";
 						el("minClaimInfo").textContent = "Unavailable";
