@@ -4,20 +4,20 @@
 	<head>
 		<meta charset="utf-8" />
 		<meta content="width=device-width,initial-scale=1" name="viewport" />
-		<title>Arbitrum ETH Faucet — Sepolia to Arbitrum</title>
+		<title>Arbitrum Gas Faucet — Gas up with Sepolia ETH</title>
 		<meta
-			content="Deposit Sepolia ETH and request small native ETH payouts on Arbitrum."
+			content="Use Sepolia testnet ETH to get a small amount of real ETH for gas on Arbitrum One."
 			name="description"
 		/>
 		<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
 		<style>
 			:root {
-				--bg: #f4f6f8;
-				--text: #151923;
+				--bg: #f0f5fa;
+				--text: #213147;
 				--muted: #687180;
 				--line: #e0e5eb;
-				--accent: #5a5bd4;
-				--soft: #eeeeff;
+				--accent: #1675b9;
+				--soft: #e7f4fc;
 				--green: #16835d;
 				--yellow: #916300;
 				--red: #b23e46;
@@ -28,7 +28,7 @@
 			body {
 				margin: 0;
 				background:
-					radial-gradient(circle at 85% 0, rgba(90, 91, 212, 0.11), transparent 30%),
+					radial-gradient(circle at 85% 0, rgba(40, 160, 240, 0.14), transparent 30%),
 					var(--bg);
 				color: var(--text);
 				font-family:
@@ -405,6 +405,43 @@
 					font-size: 12px;
 				}
 			}
+
+			/* Arbitrum-inspired navy and blue, with clear white form cards. */
+			.mark {
+				background: #213147;
+				color: #66c6ff;
+				border-radius: 10px;
+				transform: skew(-8deg);
+			}
+			.hero {
+				max-width: none;
+				margin: 28px 0;
+				padding: 44px 24px;
+				border-radius: 24px;
+				background: linear-gradient(120deg, #162537, #213147 65%, #174d72);
+				border: 1px solid #324a64;
+				position: relative;
+				overflow: hidden;
+			}
+			.hero::after {
+				content: "";
+				position: absolute;
+				inset: 0 0 0 auto;
+				width: 18%;
+				background: repeating-linear-gradient(115deg, transparent 0 28px, #28a0f012 28px 48px);
+				pointer-events: none;
+			}
+			.hero h1 { color: #fff; }
+			.hero .eyebrow { color: #73ccff; }
+			.hero p { color: #d4e2ef; max-width: 540px; }
+			.hero .badge {
+				color: #d4e2ef;
+				border-color: #47627b;
+				background: #ffffff08;
+			}
+			@media (max-width: 760px) {
+				.hero { padding: 32px 18px; margin: 20px 0; }
+			}
 		</style>
 	</head>
 	<body>
@@ -412,18 +449,18 @@
 			<header class="header">
 				<a class="brand" href="#"
 					><span aria-hidden="true" class="mark">↗</span
-					><span><b>Arbitrum Faucet</b><small>Sepolia → Arbitrum ETH</small></span></a
+					><span><b>Arbitrum Gas Faucet</b><small>A small top-up for transaction fees</small></span></a
 				><a class="back" href="https://getsepolia.2bd.net/">GetSepolia ↗</a>
 			</header>
 			<main>
 				<section class="hero">
-					<div class="eyebrow">Sepolia in · Arbitrum out</div>
-					<h1>A little ETH.<br /><span>Ready for Arbitrum.</span></h1>
+					<div class="eyebrow">Gas for Arbitrum One</div>
+					<h1>Arbitrum Gas Faucet</h1>
 					<p>
-						Deposit Sepolia ETH, receive Arbitrum ETH credits, and request a payout to
-						your wallet.
+						Use Sepolia testnet ETH to get a little real ETH
+						for transaction fees on Arbitrum One.
 					</p>
-					<span class="badge">Demo faucet · Not a bridge</span>
+					<span class="badge">Independent community faucet</span>
 				</section>
 				<div class="workspace">
 					<section aria-label="Deposit and claim" class="card">
@@ -431,7 +468,7 @@
 							<span class="num">1</span>
 							<div>
 								<h2>Deposit Sepolia ETH</h2>
-								<p>Add credits at the current faucet rate.</p>
+								<p>Your deposit determines how much gas ETH you can claim.</p>
 							</div>
 						</div>
 						<div class="field">
@@ -450,8 +487,8 @@
 						<div class="step">
 							<span class="num">2</span>
 							<div>
-								<h2>Claim Arbitrum ETH</h2>
-								<p>Choose an amount and your payout address.</p>
+								<h2>Get ETH for gas</h2>
+								<p>Receive ETH in your Arbitrum One wallet.</p>
 							</div>
 						</div>
 						<div class="field">
@@ -467,7 +504,7 @@
 							<label for="payoutAddress">Arbitrum payout address</label>
 							<input id="payoutAddress" placeholder="0x..." spellcheck="false" />
 						</div>
-						<button class="full" id="claimBtn">Request ETH Claim</button>
+						<button class="full" id="claimBtn">Request payout</button>
 						<div class="small">
 							Minimum claim amount:
 							<strong><strong id="minClaimInfo">–</strong></strong>
@@ -493,6 +530,10 @@
 									>Reading contract and Arbitrum ETH treasury balance.</span
 								>
 							</div>
+						</div>
+						<div class="row">
+							<div class="label">Faucet balance (Arbitrum)</div>
+							<div class="value" id="treasuryBalance">Loading…</div>
 						</div>
 						<div class="buttons" style="margin-bottom: 14px">
 							<button id="connectBtn">Connect Wallet</button>
@@ -524,28 +565,25 @@
 					<article>
 						<b>01 · Connect on Sepolia</b>
 						<p>
-							Use your wallet to deposit Sepolia ETH. The current rate determines your
-							Arbitrum ETH credit.
+							Deposit testnet ETH at the rate shown above.
 						</p>
 					</article>
 					<article>
 						<b>02 · Request your payout</b>
 						<p>
-							Claim available credits and select the address that should receive your
-							Arbitrum ETH.
+							Choose how much to claim and enter your receiving address.
 						</p>
 					</article>
 					<article>
 						<b>03 · Receive on Arbitrum</b>
 						<p>
-							The faucet processes your confirmed claim. Check your destination wallet
-							on Arbitrum One.
+							Use your ETH to pay transaction fees on Arbitrum One.
 						</p>
 					</article>
 				</section>
 			</main>
 			<footer>
-				<span>Sepolia → Arbitrum ETH Faucet</span
+				<span>Arbitrum Gas Faucet · Not affiliated with Arbitrum</span
 				><a href="https://getsepolia.2bd.net/">Need Sepolia ETH? Visit GetSepolia ↗</a>
 			</footer>
 		</div>
@@ -577,39 +615,67 @@
 			let walletProvider = null;
 			let signer = null;
 			let userAddress = null;
-			let readSepolia = null;
-			let readArbitrum = null;
-			let readContract = null;
-			let activeSepoliaRpc = null;
-			let activeArbitrumRpc = null;
 			let currentRateEthE18 = null;
 			let currentClaimableEth = 0n;
 			let currentMinClaimEth = 0n;
 			let refreshTimer = null;
-			async function firstWorkingProvider(name, urls) {
-				const errors = [];
-				for (const url of urls) {
-					try {
-						const provider = new ethers.JsonRpcProvider(url);
-						await provider.getBlockNumber();
-						console.log(`${name} RPC connected: ${url}`);
-						return { provider, url };
-					} catch (err) {
-						console.warn(`${name} RPC failed: ${url}`, err);
-						errors.push(`${url}: ${err.message || err}`);
-					}
-				}
-				throw new Error(`No working ${name} RPC. ${errors.join(" | ")}`);
+			// Read-only RPCs: try the preferred endpoint first, then hedge slow reads.
+			const preferredRpc = new Map();
+			let refreshSequence = 0;
+			function rpcRead(chainId, urls, operation) {
+				const preferred = preferredRpc.get(chainId);
+				const ordered = [...urls].sort((a, b) =>
+					Number(b === preferred) - Number(a === preferred));
+				return new Promise((resolve, reject) => {
+					let settled = false;
+					let failures = 0;
+					const attempts = [];
+					const cleanup = () => {
+						for (const attempt of attempts) {
+							clearTimeout(attempt.startTimer);
+							clearTimeout(attempt.deadline);
+							if (attempt.provider) attempt.provider.destroy();
+						}
+					};
+					ordered.forEach((url, index) => {
+						const attempt = {};
+						attempts.push(attempt);
+						attempt.startTimer = setTimeout(async () => {
+							if (settled) return;
+							try {
+								const request = new ethers.FetchRequest(url);
+								request.timeout = 4500;
+								const provider = new ethers.JsonRpcProvider(request, chainId);
+								attempt.provider = provider;
+								const value = await Promise.race([
+									Promise.resolve().then(() => operation(provider)),
+									new Promise((_, fail) => {
+										attempt.deadline = setTimeout(() => fail(new Error("RPC timeout")), 5000);
+									}),
+								]);
+								if (settled) return;
+								settled = true;
+								preferredRpc.set(chainId, url);
+								cleanup();
+								resolve(value);
+							} catch (error) {
+								clearTimeout(attempt.deadline);
+								if (attempt.provider) attempt.provider.destroy();
+								if (settled) return;
+								console.warn("RPC read failed:", url, error);
+								if (++failures === ordered.length) {
+									settled = true;
+									cleanup();
+									reject(new Error("Network read unavailable. Please try Refresh."));
+								}
+							}
+						}, index * 800);
+					});
+				});
 			}
-			async function initReadProviders() {
-				if (readSepolia && readArbitrum && readContract) return;
-				const sep = await firstWorkingProvider("Sepolia", SEPOLIA_RPCS);
-				const arb = await firstWorkingProvider("Arbitrum", ARBITRUM_RPCS);
-				readSepolia = sep.provider;
-				readArbitrum = arb.provider;
-				activeSepoliaRpc = sep.url;
-				activeArbitrumRpc = arb.url;
-				readContract = new ethers.Contract(SEPOLIA_CONTRACT, CONTRACT_ABI, readSepolia);
+			function readSepoliaContract(operation) {
+				return rpcRead(SEPOLIA_CHAIN_ID, SEPOLIA_RPCS, provider =>
+					operation(new ethers.Contract(SEPOLIA_CONTRACT, CONTRACT_ABI, provider)));
 			}
 			const el = (id) => document.getElementById(id);
 			function setLog(msg) {
@@ -714,21 +780,27 @@
 				el("coverageText").textContent = text;
 			}
 			async function refresh(options = {}) {
-				try {
-					await initReadProviders();
-					const [rateEthE18, minClaimEth, totalOutstandingEth, treasuryEth] =
-						await Promise.all([
-							readContract.rateEthE18(),
-							readContract.minClaimEth(),
-							readContract.totalOutstandingEth(),
-							readArbitrum.getBalance(ARBITRUM_FAUCET_ADDRESS),
+				const sequence = ++refreshSequence;
+				const address = userAddress;
+				el("treasuryBalance").textContent = "Loading…";
+				const isCurrent = () => sequence === refreshSequence;
+				const coverageTask = (async () => {
+					try {
+						const coverageResults = await Promise.allSettled([
+							readSepoliaContract(contract => contract.totalOutstandingEth()),
+							rpcRead(ARBITRUM_CHAIN_ID, ARBITRUM_RPCS,
+								provider => provider.getBalance(ARBITRUM_FAUCET_ADDRESS)).then(balance => {
+								if (isCurrent()) el("treasuryBalance").textContent = fmt18(balance, 8) + " ETH";
+								return balance;
+							}).catch(error => {
+								if (isCurrent()) el("treasuryBalance").textContent = "Unavailable";
+								throw error;
+							}),
 						]);
-					el("price").textContent = fmt18(rateEthE18, 8) + " ETH per sETH";
-					currentRateEthE18 = rateEthE18;
-					updateDepositPreview();
-					el("minClaimInfo").textContent = fmt18(minClaimEth, 8) + " ETH";
-					currentMinClaimEth = minClaimEth;
-					validateClaimAmount();
+						if (!isCurrent()) return;
+						const failure = coverageResults.find(result => result.status === "rejected");
+						if (failure) throw failure.reason;
+						const [totalOutstandingEth, treasuryEth] = coverageResults.map(result => result.value);
 					const neededEth = totalOutstandingEth;
 					if (neededEth === 0n) {
 						setCoverage(
@@ -755,40 +827,59 @@
 							"Payouts are currently unavailable until the faucet is refilled.",
 						);
 					}
-					if (userAddress) {
-						const [claimableBal, sepoliaEthBal] = await Promise.all([
-							readContract.claimableEth(userAddress),
-							readSepolia.getBalance(userAddress),
-						]);
-						el("userBalance").textContent = fmt18(claimableBal, 8) + " ETH";
-						el("userBalance").classList.remove("claimable-warning");
-						el("userBalance").classList.add("claimable-good");
-						currentClaimableEth = claimableBal;
-						el("sepoliaEthBalance").textContent =
-							fmt18(sepoliaEthBal, 6) + " Sepolia ETH";
-					} else {
-						el("userBalance").textContent = "Please connect!";
-						el("userBalance").classList.remove("claimable-good");
-						el("userBalance").classList.add("claimable-warning");
+					} catch (error) {
+						if (isCurrent()) setCoverage("yellow", "Coverage unavailable", error.message);
+						throw error;
+					}
+				})();
+				const settingsTask = (async () => {
+					const [rate, minimum] = await readSepoliaContract(contract =>
+						Promise.all([contract.rateEthE18(), contract.minClaimEth()]));
+					if (!isCurrent()) return;
+					currentRateEthE18 = rate;
+					currentMinClaimEth = minimum;
+					el("price").textContent = fmt18(rate, 8) + " ETH per sETH";
+					el("minClaimInfo").textContent = fmt18(minimum, 8) + " ETH";
+					updateDepositPreview();
+					validateClaimAmount();
+				})();
+				const walletTask = (async () => {
+					if (!address) return;
+					const [claimable, balance] = await rpcRead(SEPOLIA_CHAIN_ID, SEPOLIA_RPCS, provider => {
+						const contract = new ethers.Contract(SEPOLIA_CONTRACT, CONTRACT_ABI, provider);
+						return Promise.all([contract.claimableEth(address), provider.getBalance(address)]);
+					});
+					if (!isCurrent() || userAddress !== address) return;
+					currentClaimableEth = claimable;
+					el("userBalance").textContent = fmt18(claimable, 8) + " ETH";
+					el("userBalance").classList.remove("claimable-warning");
+					el("userBalance").classList.add("claimable-good");
+					el("sepoliaEthBalance").textContent = fmt18(balance, 6) + " Sepolia ETH";
+				})();
+				const results = await Promise.allSettled([coverageTask, settingsTask, walletTask]);
+				if (!isCurrent()) return;
+				const failed = results.some(result => result.status === "rejected");
+				if (failed) {
+					if (results[1].status === "rejected") {
+						currentRateEthE18 = null;
+						currentMinClaimEth = 0n;
+						el("price").textContent = "Unavailable";
+						el("minClaimInfo").textContent = "Unavailable";
+						updateDepositPreview();
+						validateClaimAmount();
+					}
+					if (address && results[2].status === "rejected" && userAddress === address) {
 						currentClaimableEth = 0n;
-						el("sepoliaEthBalance").textContent = "Connect wallet";
+						el("userBalance").textContent = "Unavailable";
+						el("sepoliaEthBalance").textContent = "Unavailable";
 					}
-					if (!options.silent) {
-						setLog("Updated.");
-					}
-				} catch (err) {
-					console.error(err);
-					setCoverage("red", "Read failed", err.message || String(err));
-					if (!options.silent) {
-						setLog("Refresh failed: " + (err.message || String(err)));
-					}
-				}
+					setLog("Some values could not be refreshed. Please try Refresh.");
+				} else if (!options.silent) setLog("Updated.");
 			}
 			async function deposit() {
 				try {
 					if (!signer) await connectWallet();
 					await ensureSepolia();
-					await initReadProviders();
 					const amountText = el("depositAmount").value.trim();
 					if (!amountText) throw new Error("Enter a Sepolia ETH amount.");
 					const contract = new ethers.Contract(SEPOLIA_CONTRACT, CONTRACT_ABI, signer);
@@ -808,7 +899,6 @@
 				try {
 					if (!signer) await connectWallet();
 					await ensureSepolia();
-					await initReadProviders();
 					const amountText = el("claimAmount").value.trim();
 					const payoutAddress = el("payoutAddress").value.trim();
 					if (!amountText) throw new Error("Enter an Arbitrum ETH claim amount.");
