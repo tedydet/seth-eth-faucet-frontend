@@ -531,10 +531,6 @@
 								>
 							</div>
 						</div>
-						<div class="row">
-							<div class="label">Faucet balance (Arbitrum)</div>
-							<div class="value" id="treasuryBalance">Loading…</div>
-						</div>
 						<div class="buttons" style="margin-bottom: 14px">
 							<button id="connectBtn">Connect Wallet</button>
 							<button id="refreshBtn">Refresh</button>
@@ -782,20 +778,13 @@
 			async function refresh(options = {}) {
 				const sequence = ++refreshSequence;
 				const address = userAddress;
-				el("treasuryBalance").textContent = "Loading…";
 				const isCurrent = () => sequence === refreshSequence;
 				const coverageTask = (async () => {
 					try {
 						const coverageResults = await Promise.allSettled([
 							readSepoliaContract(contract => contract.totalOutstandingEth()),
 							rpcRead(ARBITRUM_CHAIN_ID, ARBITRUM_RPCS,
-								provider => provider.getBalance(ARBITRUM_FAUCET_ADDRESS)).then(balance => {
-								if (isCurrent()) el("treasuryBalance").textContent = fmt18(balance, 8) + " ETH";
-								return balance;
-							}).catch(error => {
-								if (isCurrent()) el("treasuryBalance").textContent = "Unavailable";
-								throw error;
-							}),
+								provider => provider.getBalance(ARBITRUM_FAUCET_ADDRESS)), 
 						]);
 						if (!isCurrent()) return;
 						const failure = coverageResults.find(result => result.status === "rejected");
